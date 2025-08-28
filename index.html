@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Basic Shopping App</title>
+  <style>
+    :root{
+      --bg:#0f172a; /* slate-900 */
+      --card:#111827; /* gray-900 */
+      --muted:#94a3b8; /* slate-400 */
+      --text:#e5e7eb; /* gray-200 */
+      --accent:#22c55e; /* green-500 */
+      --accent-2:#3b82f6; /* blue-500 */
+      --danger:#ef4444; /* red-500 */
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial,sans-serif;background:linear-gradient(180deg,#0b1023,#0f172a);color:var(--text)}
+    header{
+      position:sticky;top:0;z-index:10;
+      display:flex;gap:1rem;align-items:center;justify-content:space-between;
+      padding:1rem 1.25rem;border-bottom:1px solid #1f2937;background:rgba(15,23,42,.7);backdrop-filter: blur(6px);
+    }
+    .brand{font-weight:800;letter-spacing:.5px}
+    .brand span{color:var(--accent)}
+    .search{flex:1;max-width:640px;display:flex;gap:.5rem}
+    .search input{flex:1;padding:.75rem 1rem;border-radius:.75rem;border:1px solid #1f2937;background:#0b1224;color:var(--text)}
+    .search button,.icon-btn,.btn{
+      padding:.7rem 1rem;border:1px solid #1f2937;border-radius:.75rem;background:#0b1224;color:var(--text);cursor:pointer
+    }
+    .search button:hover,.icon-btn:hover,.btn:hover{transform:translateY(-1px)}
+
+    main{max-width:1100px;margin:1rem auto;padding:0 1rem;display:grid;grid-template-columns:1fr;gap:1rem}
+
+    .toolbar{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;justify-content:space-between}
+    .filters{display:flex;gap:.5rem;flex-wrap:wrap}
+    .chip{padding:.45rem .75rem;border:1px solid #1f2937;border-radius:999px;background:#0b1224;color:var(--muted);cursor:pointer}
+    .chip.active{color:#fff;border-color:var(--accent);box-shadow:0 0 0 2px rgba(34,197,94,.15)}
+
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1rem}
+    .card{background:var(--card);border:1px solid #1f2937;border-radius:1rem;overflow:hidden;display:flex;flex-direction:column}
+    .thumb{aspect-ratio:16/10;background:linear-gradient(135deg,#1e293b,#0b1224);display:grid;place-items:center;font-weight:700;color:#cbd5e1}
+    .card .content{padding:.9rem;display:grid;gap:.5rem}
+    .price{font-weight:700}
+    .row{display:flex;align-items:center;justify-content:space-between;gap:.5rem}
+    .qty{display:flex;align-items:center;gap:.25rem}
+    .qty button{width:32px;height:32px;border-radius:.65rem}
+    .add-btn{background:var(--accent);border-color:#16a34a;color:#062b18;font-weight:700}
+
+    .cart-toggle{position:relative}
+    .cart-count{position:absolute;top:-6px;right:-6px;background:var(--accent-2);color:white;border-radius:999px;padding:0 .4rem;font-size:.75rem}
+
+    /* Cart Drawer */
+    .cart{position:fixed;inset:auto 0 0 auto;top:0;height:100dvh;width:min(92vw,380px);background:#0b1224;border-left:1px solid #1f2937;transform:translateX(100%);transition:transform .25s ease;z-index:40;display:flex;flex-direction:column}
+    .cart.open{transform:translateX(0)}
+    .cart header{position:sticky;top:0;background:#0b1224}
+    .cart-list{padding:1rem;display:grid;gap:.75rem;overflow:auto}
+    .cart-item{display:grid;grid-template-columns:1fr auto;gap:.5rem;align-items:center;background:#0e152b;border:1px solid #1f2937;border-radius:.75rem;padding:.75rem}
+    .cart-item .title{font-weight:600}
+    .cart-item .sub{color:var(--muted);font-size:.9rem}
+    .cart-item .actions{display:flex;align-items:center;gap:.25rem}
+    .cart footer{margin-top:auto;padding:1rem;border-top:1px solid #1f2937;display:grid;gap:.5rem}
+    .total{display:flex;align-items:center;justify-content:space-between;font-weight:800}
+    .checkout{background:var(--accent-2);border-color:#2563eb;color:white;font-weight:700}
+
+    footer.site{max-width:1100px;margin:2rem auto;padding:1rem;color:var(--muted);text-align:center}
+
+    @media (min-width: 900px){
+      main{grid-template-columns: 1fr}
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">Shop<span>Lite</span></div>
+    <div class="search">
+      <input id="search" placeholder="Search products (e.g. shoes, watch)" />
+      <button id="searchBtn" aria-label="Search">Search</button>
+    </div>
+    <button class="icon-btn cart-toggle" id="openCart" aria-label="Open cart">🛒 <span class="cart-count" id="cartCount">0</span></button>
+  </header>
+
+  <main>
+    <div class="toolbar">
+      <div class="filters" id="filters">
+        <button class="chip active" data-filter="all">All</button>
+        <button class="chip" data-filter="fashion">Fashion</button>
+        <button class="chip" data-filter="electronics">Electronics</button>
+        <button class="chip" data-filter="home">Home</button>
+      </div>
+      <div>
+        <button class="btn" id="clearCartTop">Clear Cart</button>
+      </div>
+    </div>
+
+    <section class="grid" id="productGrid">
+      <!-- Cards injected by JS for simplicity -->
+    </section>
+  </main>
+
+  <aside class="cart" id="cart">
+    <header>
+      <div style="display:flex;align-items:center;gap:.5rem">
+        <button class="icon-btn" id="closeCart" aria-label="Close">←</button>
+        <strong>Your Cart</strong>
+      </div>
+      <div></div>
+    </header>
+    <div class="cart-list" id="cartList"></div>
+    <footer>
+      <div class="total"><span>Total</span><span id="cartTotal">₹0.00</span></div>
+      <button class="btn checkout" id="checkout">Checkout</button>
+      <button class="btn" id="clearCart">Clear Cart</button>
+    </footer>
+  </aside>
+
+  <footer class="site">© <span id="year"></span> ShopLite. Basic HTML demo template.</footer>
+
+  <script>
+    // --- Demo Data ---
+    const PRODUCTS = [
+      {id:1, name:"Classic T-Shirt", price:499, tag:"fashion"},
+      {id:2, name:"Wireless Headphones", price:1999, tag:"electronics"},
+      {id:3, name:"Ceramic Mug", price:299, tag:"home"},
+      {id:4, name:"Running Shoes", price:2499, tag:"fashion"},
+      {id:5, name:"Smart Watch", price:3499, tag:"electronics"},
+      {id:6, name:"LED Desk Lamp", price:1199, tag:"home"},
+      {id:7, name:"Bluetooth Speaker", price:1599, tag:"electronics"},
+      {id:8, name:"Throw Pillow", price:399, tag:"home"}
+    ];
+
+    const state = { filter:'all', query:'', cart: new Map() };
+
+    const el = sel => document.querySelector(sel);
+    const els = sel => [...document.querySelectorAll(sel)];
+
+    // --- Render Products ---
+    function renderProducts(){
+      const grid = el('#productGrid');
+      grid.innerHTML = '';
+      const filtered = PRODUCTS.filter(p => {
+        const byTag = state.filter==='all' || p.tag===state.filter;
+        const byQuery = !state.query || p.name.toLowerCase().includes(state.query.toLowerCase());
+        return byTag && byQuery;
+      });
+      for(const p of filtered){
+        const card = document.createElement('article');
+        card.className = 'card';
+        card.innerHTML = `
+          <div class="thumb">${p.tag.toUpperCase()}</div>
+          <div class="content">
+            <div class="row"><strong>${p.name}</strong><span class="price">₹${p.price.toFixed(2)}</span></div>
+            <div class="row">
+              <div class="qty">
+                <button aria-label="Decrease" data-step="-1" data-id="${p.id}">−</button>
+                <span id="qty-${p.id}">0</span>
+                <button aria-label="Increase" data-step="1" data-id="${p.id}">+</button>
+              </div>
+              <button class="add-btn" data-add="${p.id}">Add to Cart</button>
+            </div>
+          </div>`;
+        grid.appendChild(card);
+      }
+    }
+
+    // --- Cart Helpers ---
+    function updateCartCount(){
+      const count = [...state.cart.values()].reduce((a,b)=>a+b,0);
+      el('#cartCount').textContent = count;
+    }
+    function updateQtyBadges(){
+      for(const [id,qty] of state.cart){
+        const badge = el(`#qty-${id}`);
+        if(badge) badge.textContent = qty;
+      }
+      // reset for products not in cart
+      PRODUCTS.forEach(p=>{ if(!state.cart.has(p.id)){ const b=el(`#qty-${p.id}`); if(b) b.textContent='0'; }});
+    }
+    function renderCart(){
+      const list = el('#cartList');
+      list.innerHTML = '';
+      let total = 0;
+      for(const [id,qty] of state.cart){
+        const p = PRODUCTS.find(x=>x.id===id);
+        const line = p.price * qty; total += line;
+        const item = document.createElement('div');
+        item.className = 'cart-item';
+        item.innerHTML = `
+          <div>
+            <div class="title">${p.name}</div>
+            <div class="sub">₹${p.price.toFixed(2)} × ${qty} = ₹${line.toFixed(2)}</div>
+          </div>
+          <div class="actions">
+            <button data-id="${id}" data-step="-1">−</button>
+            <button data-id="${id}" data-step="1">+</button>
+            <button data-remove="${id}" title="Remove" aria-label="Remove">🗑️</button>
+          </div>`;
+        list.appendChild(item);
+      }
+      el('#cartTotal').textContent = `₹${total.toFixed(2)}`;
+      updateCartCount();
+      updateQtyBadges();
+    }
+
+    function addToCart(id, amount=1){
+      const current = state.cart.get(id) || 0;
+      const next = Math.max(0, current + amount);
+      if(next===0){ state.cart.delete(id); } else { state.cart.set(id,next); }
+      renderCart();
+    }
+
+    // --- Events ---
+    document.addEventListener('click', (e)=>{
+      const btn = e.target.closest('button');
+      if(!btn) return;
+
+      // Filter chips
+      if(btn.matches('.chip')){
+        els('.chip').forEach(c=>c.classList.remove('active'));
+        btn.classList.add('active');
+        state.filter = btn.dataset.filter;
+        renderProducts();
+        updateQtyBadges();
+      }
+
+      // Qty controls on cards
+      if(btn.dataset.step && btn.dataset.id){
+        addToCart(Number(btn.dataset.id), Number(btn.dataset.step));
+      }
+
+      // Add to cart
+      if(btn.dataset.add){
+        addToCart(Number(btn.dataset.add), 1);
+      }
+
+      // Cart item actions
+      if(btn.dataset.remove){
+        state.cart.delete(Number(btn.dataset.remove));
+        renderCart();
+      }
+      if(btn.dataset.step && !btn.dataset.id && btn.closest('.cart-item')){
+        const id = Number(btn.getAttribute('data-id'));
+        addToCart(id, Number(btn.getAttribute('data-step')));
+      }
+
+      // Cart drawer
+      if(btn.id==='openCart'){ el('#cart').classList.add('open'); }
+      if(btn.id==='closeCart'){ el('#cart').classList.remove('open'); }
+
+      if(btn.id==='clearCart' || btn.id==='clearCartTop'){
+        state.cart.clear();
+        renderCart();
+      }
+
+      if(btn.id==='checkout'){
+        alert('This is a basic demo. Hook this up to your checkout logic.');
+      }
+    });
+
+    el('#searchBtn').addEventListener('click', ()=>{
+      state.query = el('#search').value.trim();
+      renderProducts();
+      updateQtyBadges();
+    });
+    el('#search').addEventListener('keydown', (e)=>{
+      if(e.key==='Enter'){ el('#searchBtn').click(); }
+    });
+
+    // Init
+    document.addEventListener('DOMContentLoaded', ()=>{
+      renderProducts();
+      renderCart();
+      el('#year').textContent = new Date().getFullYear();
+    });
+  </script>
+</body>
+</html>
